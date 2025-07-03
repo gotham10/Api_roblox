@@ -7,16 +7,13 @@ do
         hash = 'local a={...}local b=a[1]local function c(a,b)return string.find(a,b,nil,true)end;return c(b,"hash")and c(string.lower(tostring(a[2])),"crypt")'
     }, true, 10)
 end
-
 local getscriptbytecode = global_container.getscriptbytecode
 local sha384
-
 if global_container.hash then
     sha384 = function(data)
         return global_container.hash(data, "sha384")
     end
 end
-
 if not sha384 then
     pcall(function()
         local require_online = loadstring(game:HttpGet("https://raw.githubusercontent.com/luau/SomeHub/main/RequireOnlineModule.luau", true), "RequireOnlineModule")
@@ -25,7 +22,6 @@ if not sha384 then
         end
     end)
 end
-
 local decompile = decompile
 local setclipboard = setclipboard
 local genv = getgenv()
@@ -33,7 +29,6 @@ if not genv.scriptcache then
     genv.scriptcache = {}
 end
 local ldeccache = genv.scriptcache
-
 local function construct_TimeoutHandler(timeout, func, timeout_return_value)
     return function(...)
         local args = {...}
@@ -61,7 +56,6 @@ local function construct_TimeoutHandler(timeout, func, timeout_return_value)
         return coroutine.yield()
     end
 end
-
 local function findInstanceAndWait(path, waitTimeout)
     if type(path) ~= "string" then return nil end
     local waitTime = waitTimeout or 10
@@ -92,30 +86,23 @@ local function findInstanceAndWait(path, waitTimeout)
     end
     return current
 end
-
 function copyScriptSource(target, timeout)
     if not (decompile and setclipboard and getscriptbytecode and sha384) then
         warn("Error: Required functions are missing. This may be a network issue or an incompatible executor.")
         return
     end
-
     local scriptInstance = (typeof(target) == "Instance" and target) or findInstanceAndWait(target)
-
     if not (scriptInstance and scriptInstance:IsA("LuaSourceContainer")) then
         warn("Error: Invalid target. Please provide a valid script instance or a string path to it.")
         return
     end
-
     local decompileTimeout = timeout or 10
     local getbytecode_h = construct_TimeoutHandler(3, getscriptbytecode)
     local decompiler_h = construct_TimeoutHandler(decompileTimeout, decompile, "-- Decompiler timed out after " .. tostring(decompileTimeout) .. " seconds.")
-
     print("Attempting to get source for: " .. scriptInstance:GetFullName())
-
     local success, bytecode = getbytecode_h(scriptInstance)
     local hashed_bytecode
     local cached_source
-
     if success and bytecode and bytecode ~= "" then
         hashed_bytecode = sha384(bytecode)
         cached_source = ldeccache[hashed_bytecode]
@@ -124,13 +111,11 @@ function copyScriptSource(target, timeout)
         print("Script is empty. Copied to clipboard.")
         return
     end
-
     if cached_source then
         setclipboard(cached_source)
         print("Success! Script source copied from cache to clipboard.")
         return
     end
-
     print("Decompiling script...")
     local decompile_success, decompiled_source = decompiler_h(scriptInstance)
     local output
@@ -139,7 +124,6 @@ function copyScriptSource(target, timeout)
     else
         output = "--[[ Failed to decompile. Reason: " .. tostring(decompiled_source) .. " ]]"
     end
-    
     if output:match("^%s*%-%- Decompiled with") then
         local first_newline = output:find("\n")
         if first_newline then
@@ -149,15 +133,12 @@ function copyScriptSource(target, timeout)
         end
         output = output:gsub("^%s*\n", "")
     end
-
     if hashed_bytecode then
         ldeccache[hashed_bytecode] = output
     end
-
     setclipboard(output)
     print("Success! Decompiled script source copied to clipboard.")
 end
-
 if path and type(path) == "string" and path:gsub("%s*", "") ~= "" then
     copyScriptSource("game." .. path)
 else
