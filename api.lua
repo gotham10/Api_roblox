@@ -1,37 +1,58 @@
 return function()
+	print("[DEBUG] Script initiated.")
+
 	local global_container
 	do
+		print("[DEBUG] Loading UniversalMethodFinder...")
 		local finder_code, global_container_obj = loadstring(game:HttpGet("https://raw.githubusercontent.com/luau/SomeHub/main/UniversalMethodFinder.luau", true), "UniversalMethodFinder")()
 		global_container = global_container_obj
+		print("[DEBUG] UniversalMethodFinder loaded. Finding methods...")
 		finder_code({
 			getscriptbytecode = 'string.find(...,"get",nil,true) and string.find(...,"bytecode",nil,true)',
 			hash = 'local a={...}local b=a[1]local function c(a,b)return string.find(a,b,nil,true)end;return c(b,"hash")and c(string.lower(tostring(a[2])),"crypt")'
 		}, true, 10)
+		print("[DEBUG] Methods search complete.")
 	end
 	
 	local getscriptbytecode = global_container.getscriptbytecode
 	local sha384
 	
 	if global_container.hash then
+		print("[DEBUG] Hash function found. Defining sha384.")
 		sha384 = function(data)
 			return global_container.hash(data, "sha384")
 		end
+	else
+		print("[DEBUG] Hash function not found via finder.")
 	end
 	
 	if not sha384 then
+		print("[DEBUG] Attempting to load sha384 from online module.")
 		pcall(function()
 			local require_online = loadstring(game:HttpGet("https://raw.githubusercontent.com/luau/SomeHub/main/RequireOnlineModule.luau", true), "RequireOnlineModule")
 			if require_online then
+				print("[DEBUG] Online module loaded. Requiring hash library.")
 				sha384 = require_online()(4544052033).sha384
+			else
+				print("[DEBUG] Failed to load online module.")
 			end
 		end)
+	end
+	
+	if sha384 then
+		print("[DEBUG] sha384 function is ready.")
+	else
+		print("[DEBUG] CRITICAL: Failed to get sha384 function.")
 	end
 	
 	local decompile = decompile
 	local setclipboard = setclipboard
 	local genv = getgenv()
 	if not genv.scriptcache then
+		print("[DEBUG] Script cache not found. Creating new cache.")
 		genv.scriptcache = {}
+	else
+		print("[DEBUG] Script cache found.")
 	end
 	local ldeccache = genv.scriptcache
 	
@@ -64,77 +85,103 @@ return function()
 	end
 	
 	local function findInstanceAndWait(path, waitTimeout)
-		if type(path) ~= "string" then return nil end
+		print("[DEBUG] findInstanceAndWait called with path: " .. tostring(path))
+		if type(path) ~= "string" then print("[DEBUG] Path is not a string.") return nil end
 		local waitTime = waitTimeout or 10
 		local parts = path:split(".")
 		local current = game
 
 		if parts[1] and parts[1]:lower() == "game" then
+			print("[DEBUG] Path starts with 'game', removing it.")
 			table.remove(parts, 1)
 		end
 
 		for i = 1, #parts do
 			local partName = parts[i]
+			print("[DEBUG] Searching for: " .. partName .. " in " .. current:GetFullName())
 			if not current or typeof(current) ~= "Instance" then
-				warn("Path is invalid at: " .. partName)
+				warn("[DEBUG] Path became invalid at: " .. partName)
 				return nil
 			end
 			local success, found
 			if partName == "LocalPlayer" and current == game:GetService("Players") then
+				print("[DEBUG] Special case: Getting LocalPlayer.")
 				found = current.LocalPlayer
 				success = true
 			else
 				success, found = pcall(current.WaitForChild, current, partName, waitTime)
 			end
 			if success and found then
+				print("[DEBUG] Found: " .. found:GetFullName())
 				current = found
 			else
-				warn("Could not find child '"..partName.."' in '"..current:GetFullName().."'")
+				warn("[DEBUG] Could not find child '"..partName.."' in '"..current:GetFullName().."'")
 				return nil
 			end
 		end
+		print("[DEBUG] findInstanceAndWait finished. Final instance: " .. tostring(current))
 		return current
 	end
 	
 	local function copyScriptSource(target, timeout)
+		print("[DEBUG] copyScriptSource initiated.")
 		if not (decompile and setclipboard and getscriptbytecode and sha384) then
 			warn("Error: Required functions are missing. This may be a network issue or an incompatible executor.")
+			print("[DEBUG] Missing functions - decompile:", tostring(decompile), "setclipboard:", tostring(setclipboard), "getscriptbytecode:", tostring(getscriptbytecode), "sha384:", tostring(sha384))
 			return
 		end
+		
 		local scriptInstance = (typeof(target) == "Instance" and target) or findInstanceAndWait(target)
 		if not (scriptInstance and scriptInstance:IsA("LuaSourceContainer")) then
 			warn("Error: Invalid target. Please provide a valid script instance or a string path to it.")
+			print("[DEBUG] Target is not a valid script. Target:", tostring(target))
 			return
 		end
+		
 		local decompileTimeout = timeout or 10
 		local getbytecode_h = construct_TimeoutHandler(3, getscriptbytecode)
 		local decompiler_h = construct_TimeoutHandler(decompileTimeout, decompile, "-- Decompiler timed out after " .. tostring(decompileTimeout) .. " seconds.")
+		
 		print("Attempting to get source for: " .. scriptInstance:GetFullName())
 		local success, bytecode = getbytecode_h(scriptInstance)
 		local hashed_bytecode
 		local cached_source
+
 		if success and bytecode and bytecode ~= "" then
+			print("[DEBUG] Successfully got script bytecode. Hashing now.")
 			hashed_bytecode = sha384(bytecode)
+			print("[DEBUG] Bytecode hashed. Checking cache.")
 			cached_source = ldeccache[hashed_bytecode]
 		elseif success then
+			print("[DEBUG] Script is empty.")
 			setclipboard("-- The script is empty.")
 			print("Script is empty. Copied to clipboard.")
 			return
+		else
+			print("[DEBUG] Failed to get bytecode. Reason:", tostring(bytecode))
 		end
+
 		if cached_source then
+			print("[DEBUG] Found source in cache.")
 			setclipboard(cached_source)
 			print("Success! Script source copied from cache to clipboard.")
 			return
 		end
+		
 		print("Decompiling script...")
 		local decompile_success, decompiled_source = decompiler_h(scriptInstance)
 		local output
+		
 		if decompile_success and decompiled_source then
+			print("[DEBUG] Decompilation successful.")
 			output = string.gsub(decompiled_source, "\0", "\\0")
 		else
+			print("[DEBUG] Decompilation failed. Reason:", tostring(decompiled_source))
 			output = "--[[ Failed to decompile. Reason: " .. tostring(decompiled_source) .. " ]]"
 		end
+		
 		if output:match("^%s*%-%- Decompiled with") then
+			print("[DEBUG] Removing decompiler header.")
 			local first_newline = output:find("\n")
 			if first_newline then
 				output = output:sub(first_newline + 1)
@@ -143,18 +190,25 @@ return function()
 			end
 			output = output:gsub("^%s*\n", "")
 		end
+		
 		if hashed_bytecode then
+			print("[DEBUG] Storing decompiled source in cache.")
 			ldecache[hashed_bytecode] = output
 		end
+		
 		setclipboard(output)
 		print("Success! Decompiled script source copied to clipboard.")
 	end
 
+	print("[DEBUG] Attempting to get user path from getgenv().path")
 	local user_path = getgenv().path
 	if not user_path or type(user_path) ~= "string" or user_path == "" then
 		warn("Please set the global 'path' variable to the script's path before loading.")
+		print("[DEBUG] user_path was nil or invalid:", tostring(user_path))
 		return
 	end
+	print("[DEBUG] Got path:", user_path)
 
 	copyScriptSource(user_path)
+	print("[DEBUG] Script finished.")
 end
