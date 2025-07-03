@@ -1,3 +1,4 @@
+--!optimize 2
 local function setup_logger()
 	local loggerGui = Instance.new("ScreenGui")
 	loggerGui.Name = "OnScreenLogger"
@@ -8,20 +9,21 @@ local function setup_logger()
 	logTextLabel.Name = "LogText"
 	logTextLabel.Parent = loggerGui
 	logTextLabel.BackgroundTransparency = 1
-	logTextLabel.Position = UDim2.new(1, -310, 0, 10)
-	logTextLabel.Size = UDim2.new(0, 300, 0, 200)
+	logTextLabel.Position = UDim2.new(1, -210, 0, 10)
+	logTextLabel.Size = UDim2.new(0, 200, 0, 120)
 	logTextLabel.Font = Enum.Font.SourceSans
 	logTextLabel.Text = ""
 	logTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	logTextLabel.TextSize = 14
 	logTextLabel.TextWrapped = true
-	logTextLabel.TextXAlignment = Enum.TextXAlignment.Right
+	logTextLabel.TextXAlignment = Enum.TextXAlignment.Left
 	logTextLabel.TextYAlignment = Enum.TextYAlignment.Top
+	logTextLabel.TextStrokeTransparency = 0.5
 
 	loggerGui.Parent = game:GetService("CoreGui")
 
 	local logHistory = {}
-	local maxLogLines = 20
+	local maxLogLines = 15
 
 	local function customLogger(messageType, ...)
 		local message = table.concat({ ... }, " ")
