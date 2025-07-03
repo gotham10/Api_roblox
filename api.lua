@@ -1,4 +1,3 @@
---!optimize 2
 local function setup_logger()
 	local loggerGui = Instance.new("ScreenGui")
 	loggerGui.Name = "OnScreenLogger"
