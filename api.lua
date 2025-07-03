@@ -1,46 +1,3 @@
-local function setup_logger()
-	local loggerGui = Instance.new("ScreenGui")
-	loggerGui.Name = "OnScreenLogger"
-	loggerGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-	loggerGui.ResetOnSpawn = false
-
-	local logTextLabel = Instance.new("TextLabel")
-	logTextLabel.Name = "LogText"
-	logTextLabel.Parent = loggerGui
-	logTextLabel.BackgroundTransparency = 1
-	logTextLabel.Position = UDim2.new(1, -210, 0, 10)
-	logTextLabel.Size = UDim2.new(0, 200, 0, 120)
-	logTextLabel.Font = Enum.Font.SourceSans
-	logTextLabel.Text = ""
-	logTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	logTextLabel.TextSize = 14
-	logTextLabel.TextWrapped = true
-	logTextLabel.TextXAlignment = Enum.TextXAlignment.Left
-	logTextLabel.TextYAlignment = Enum.TextYAlignment.Top
-	logTextLabel.TextStrokeTransparency = 0.5
-
-	loggerGui.Parent = game:GetService("CoreGui")
-
-	local logHistory = {}
-	local maxLogLines = 15
-
-	local function customLogger(messageType, ...)
-		local message = table.concat({ ... }, " ")
-		local prefix = messageType == "WARN" and "[WARN] " or ""
-		local fullMessage = prefix .. message
-		table.insert(logHistory, 1, fullMessage)
-		if #logHistory > maxLogLines then
-			table.remove(logHistory)
-		end
-		logTextLabel.Text = table.concat(logHistory, "\n")
-	end
-
-	return customLogger
-end
-
-local custom_print = setup_logger()
-local custom_warn = function(...) custom_print("WARN", ...) end
-
 local global_container
 do
 	local finder_code, global_container_obj = (function()
@@ -98,7 +55,7 @@ do
 							end
 							table.insert(matched, methodname)
 							if printresults then
-								custom_print(methodname, name)
+								print(methodname, name)
 							end
 						end
 					end
@@ -257,11 +214,11 @@ local function findInstanceAndWait(path, waitTimeout)
 			if success and found then
 				current = found
 			else
-				custom_warn("Could not find child '" .. partName .. "' in '" .. current:GetFullName() .. "'")
+				warn("Could not find child '" .. partName .. "' in '" .. current:GetFullName() .. "'")
 				return nil
 			end
 		else
-			custom_warn("Path is invalid at: " .. partName)
+			warn("Path is invalid at: " .. partName)
 			return nil
 		end
 	end
@@ -270,18 +227,18 @@ end
 
 function copyScriptSource(target, timeout)
 	if not (decompile and setclipboard and getscriptbytecode and sha384) then
-		custom_warn("Error: Required functions are missing. This may be a network issue or an incompatible executor.")
+		warn("Error: Required functions are missing. This may be a network issue or an incompatible executor.")
 		return
 	end
 	local scriptInstance = (typeof(target) == "Instance" and target) or findInstanceAndWait(target)
 	if not (scriptInstance and scriptInstance:IsA("LuaSourceContainer")) then
-		custom_warn("Error: Invalid target. Please provide a valid script instance or a string path to it.")
+		warn("Error: Invalid target. Please provide a valid script instance or a string path to it.")
 		return
 	end
 	local decompileTimeout = timeout or 10
 	local getbytecode_h = construct_TimeoutHandler(3, getscriptbytecode)
 	local decompiler_h = construct_TimeoutHandler(decompileTimeout, decompile, "-- Decompiler timed out after " .. tostring(decompileTimeout) .. " seconds.")
-	custom_print("Attempting to get source for: " .. scriptInstance:GetFullName())
+	print("Attempting to get source for: " .. scriptInstance:GetFullName())
 	local success, bytecode = getbytecode_h(scriptInstance)
 	local hashed_bytecode
 	local cached_source
@@ -290,15 +247,15 @@ function copyScriptSource(target, timeout)
 		cached_source = ldeccache[hashed_bytecode]
 	elseif success then
 		setclipboard("-- The script is empty.")
-		custom_print("Script is empty. Copied to clipboard.")
+		print("Script is empty. Copied to clipboard.")
 		return
 	end
 	if cached_source then
 		setclipboard(cached_source)
-		custom_print("Success! Script source copied from cache to clipboard.")
+		print("Success! Script source copied from cache to clipboard.")
 		return
 	end
-	custom_print("Decompiling script...")
+	print("Decompiling script...")
 	local decompile_success, decompiled_source = decompiler_h(scriptInstance)
 	local output
 	if decompile_success and decompiled_source then
@@ -319,12 +276,12 @@ function copyScriptSource(target, timeout)
 		ldeccache[hashed_bytecode] = output
 	end
 	setclipboard(output)
-	custom_print("Success! Decompiled script source copied to clipboard.")
+	print("Success! Decompiled script source copied to clipboard.")
 end
 
 if path and type(path) == "string" and path:gsub("%s*", "") ~= "" then
 	copyScriptSource("game." .. path)
 else
-	custom_warn("Path is not defined or is empty.")
-	custom_print("Example: path = 'Players.LocalPlayer.PlayerScripts.Controllers.PlayerController'")
+	warn("Path is not defined or is empty. Please set the 'path' variable before running the script.")
+	print("Example: path = 'Players.LocalPlayer.PlayerScripts'")
 end
