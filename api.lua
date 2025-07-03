@@ -4,49 +4,33 @@ local function setup_logger()
 	loggerGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 	loggerGui.ResetOnSpawn = false
 
-	local logFrame = Instance.new("Frame")
-	logFrame.Name = "LogFrame"
-	logFrame.Parent = loggerGui
-	logFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	logFrame.BackgroundTransparency = 0.3
-	logFrame.BorderColor3 = Color3.fromRGB(200, 200, 200)
-	logFrame.BorderSizePixel = 1
-	logFrame.Position = UDim2.new(1, -310, 0, 10)
-	logFrame.Size = UDim2.new(0, 300, 0, 200)
-	logFrame.ClipsDescendants = true
-
 	local logTextLabel = Instance.new("TextLabel")
 	logTextLabel.Name = "LogText"
-	logTextLabel.Parent = logFrame
-	logTextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	logTextLabel.Parent = loggerGui
 	logTextLabel.BackgroundTransparency = 1
-	logTextLabel.Size = UDim2.new(1, 0, 1, 0)
+	logTextLabel.Position = UDim2.new(1, -310, 0, 10)
+	logTextLabel.Size = UDim2.new(0, 300, 0, 200)
 	logTextLabel.Font = Enum.Font.SourceSans
 	logTextLabel.Text = ""
 	logTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	logTextLabel.TextSize = 14
 	logTextLabel.TextWrapped = true
-	logTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+	logTextLabel.TextXAlignment = Enum.TextXAlignment.Right
 	logTextLabel.TextYAlignment = Enum.TextYAlignment.Top
 
-	local listLayout = Instance.new("UIListLayout")
-	listLayout.Parent = logFrame
-	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	listLayout.Padding = UDim.new(0, 5)
-
 	loggerGui.Parent = game:GetService("CoreGui")
+
 	local logHistory = {}
 	local maxLogLines = 20
+
 	local function customLogger(messageType, ...)
-		local message = table.concat({...}, " ")
+		local message = table.concat({ ... }, " ")
 		local prefix = messageType == "WARN" and "[WARN] " or ""
 		local fullMessage = prefix .. message
-
 		table.insert(logHistory, 1, fullMessage)
 		if #logHistory > maxLogLines then
 			table.remove(logHistory)
 		end
-
 		logTextLabel.Text = table.concat(logHistory, "\n")
 	end
 
